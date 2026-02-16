@@ -18,7 +18,7 @@ const menuData = {
     { label: "Dashboard", icon: <FaTachometerAlt />, link: "/" },
     // { label: "Manage Customers", icon: <TbUsersGroup />, link: "/customers" },
     { label: "Manage Templates", icon: <TbTemplate />, link: "/templates" },
-    { label: "Generate Media Link", icon: <FaLink />, link: "/manage-files" },
+    // { label: "Generate Media Link", icon: <FaLink />, link: "/manage-files" },
     { label: "Broadcast Message", icon: <BsSend />, link: "/send-message" },
     // { label: "Broadcast Details", icon: <FiMessageCircle />, link: "/broadcast-details" },
     { label: "Manage Chatbots", icon: <TbMessageChatbot />, link: "/chatbots" },

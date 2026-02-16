@@ -11,6 +11,8 @@ import { MdContentCopy } from 'react-icons/md';
 import { PiArrowBendUpLeft } from 'react-icons/pi';
 import { BsCheck, BsCheck2All, BsClock } from 'react-icons/bs';
 import { FcCancel } from "react-icons/fc";
+import Loader from '../components/Loader';
+import MessageStatus from '../components/MessageStatus';
 
 const Messagener = () => {
     const { userData } = useSelector((state) => state.user)
@@ -20,6 +22,7 @@ const Messagener = () => {
     const [chatHistory, setChatHistory] = useState([]);
     const [selectedUser, setSelectedUser] = useState(null);
     const [newMessage, setNewMessage] = useState("");
+    const [chatLoader, setChatLoader] = useState(false);
     const handleSendMessage = () => {
         if (newMessage.trim() === "") return;
         const updatedUser = {
@@ -55,6 +58,7 @@ const Messagener = () => {
 
     const getCustomers = async () => {
         try {
+            setChatLoader(true);
             const response = await axiosInstance.get(endPoints.getAllClientCustomers + `/${userData?.client?.id}`);
             if (response?.data?.status) {
                 setCustomers(response?.data?.data?.customers || []);
@@ -62,8 +66,10 @@ const Messagener = () => {
             } else {
                 showToast('error', response?.data?.message || 'Something went wrong');
             }
+            setChatLoader(false);
         } catch (error) {
             console.log(error);
+            setChatLoader(false);
             showToast('error', error?.response?.data?.message || 'Something went wrong');
         }
     }
@@ -106,6 +112,19 @@ const Messagener = () => {
     }
 
     // console.log("chatHistory", String(chatHistory[18].messageJsonData.BODY_TEXT));
+
+    function replaceDynamicParams(templateData, type = "body") {
+        let text = transformString(templateData?.CONTENT?.bodyText || "");
+        const bodyParams =
+            templateData?.PARAMETERS?.find(p => p.type === type)?.parameters || [];
+
+        text = text.replace(/{{(\d+)}}/g, (match, index) => {
+            const paramIndex = parseInt(index, 10) - 1;
+            return bodyParams[paramIndex]?.text || match;
+        });
+
+        return text;
+    }
 
     return (
         <div className="flex h-[92vh]">
@@ -164,7 +183,7 @@ const Messagener = () => {
                                             className={`flex  ${(chat?.sender === "BOT" || chat?.sender === "SYSTEM") ? "justify-end" : "justify-start"}`}
                                         >
                                             {
-                                                chat.messageJsonData.TYPE === "LIST" && <div
+                                                chat?.messageJsonData?.TYPE === "LIST" && <div
                                                     className={`p-2 rounded-lg ${chat?.sender === "BOT" || chat?.sender === "SYSTEM"
                                                         ? "bg-[#D9FDD3] text-gray max-w-max w-[40%]"
                                                         : "bg-white text-gray-800 max-w-max w-[40%]"
@@ -174,23 +193,7 @@ const Messagener = () => {
                                                         <p className="text-md break-all">{chat?.messageJsonData?.BODY_TEXT || ''}</p>
                                                         <p className="text-xs text-end text-gray-800 flex justify-end items-center">
                                                             {getISTTime(chat.messageDateTime)}
-                                                            <span>
-                                                                {
-                                                                    chat?.messageStatus === "pending" && <BsClock className='h-3 w-3 text-gray-600 flex justify-center items-center' />
-                                                                }
-                                                                {
-                                                                    chat?.messageStatus === "sent" && <BsCheck className='h-4 w-4 text-gray-600 flex justify-center items-center' />
-                                                                }
-                                                                {
-                                                                    chat?.messageStatus === "delivered" && <BsCheck2All className='h-4 w-4 text-gray-600 flex justify-center items-center' />
-                                                                }
-                                                                {
-                                                                    chat?.messageStatus === "read" && <BsCheck2All className='h-4 w-4 text-blue-500 flex justify-center items-center' />
-                                                                }
-                                                                {
-                                                                    chat?.messageStatus === "failed" && <FcCancel className='h-4 w-4 text-blue-500 flex justify-center items-center' />
-                                                                }
-                                                            </span>
+                                                            <MessageStatus messageStatus={chat?.messageStatus} />
                                                         </p>
                                                         <hr />
                                                         <p className="text-md break-all items-center flex gap-2"><TfiMenuAlt />{chat?.messageJsonData?.BUTTON_NAME || ''}</p>
@@ -211,7 +214,7 @@ const Messagener = () => {
                                                 </div>
                                             }
                                             {
-                                                chat.messageJsonData.TYPE === "BUTTON" && <div
+                                                chat?.messageJsonData?.TYPE === "BUTTON" && <div
                                                     className={`p-2 rounded-lg ${chat?.sender === "BOT" || chat?.sender === "SYSTEM"
                                                         ? "bg-[#D9FDD3] text-gray max-w-max w-[40%]"
                                                         : "bg-white text-gray-800 max-w-max w-[40%]"
@@ -221,31 +224,17 @@ const Messagener = () => {
                                                         <p className="text-md break-all">{chat?.messageJsonData?.BODY_TEXT || ''}</p>
                                                         <p className="text-xs text-end text-gray-800 flex justify-end items-center">
                                                             {getISTTime(chat.messageDateTime)}
-                                                            <span>
-                                                                {
-                                                                    chat?.messageStatus === "pending" && <BsClock className='h-3 w-3 text-gray-600 flex justify-center items-center' />
-                                                                }
-                                                                {
-                                                                    chat?.messageStatus === "sent" && <BsCheck className='h-4 w-4 text-gray-600 flex justify-center items-center' />
-                                                                }
-                                                                {
-                                                                    chat?.messageStatus === "delivered" && <BsCheck2All className='h-4 w-4 text-gray-600 flex justify-center items-center' />
-                                                                }
-                                                                {
-                                                                    chat?.messageStatus === "read" && <BsCheck2All className='h-4 w-4 text-blue-500 flex justify-center items-center' />
-                                                                }
-                                                                {
-                                                                    chat?.messageStatus === "failed" && <FcCancel className='h-4 w-4 text-blue-500 flex justify-center items-center' />
-                                                                }
-                                                            </span>
+                                                            <MessageStatus messageStatus={chat?.messageStatus} />
                                                         </p>
                                                         <hr />
                                                         <hr />
                                                         {
                                                             chat?.messageJsonData?.BUTTON_DATA?.map((button, index) => (
+                                                                // console.log("button", button)
+                                                                
                                                                 <div className='gap-2 items-center p-2' key={index}>
-                                                                    <p className='border text-sm p-1 border-gray-400 items-center'>
-                                                                        {button?.title}
+                                                                    <p className='border text-sm p-1 border-gray-400 items-center text-center text-blue-700'>
+                                                                        {button?.type == "reply" ? button?.reply?.title : button?.title}
                                                                     </p>
                                                                 </div>
                                                             ))
@@ -254,7 +243,7 @@ const Messagener = () => {
                                                 </div>
                                             }
                                             {
-                                                chat.messageJsonData.TYPE === "TEXT" && <div
+                                                chat?.messageJsonData?.TYPE === "TEXT" && <div
                                                     className={`p-2 rounded-lg ${chat?.sender === "BOT" || chat?.sender === "SYSTEM"
                                                         ? "bg-[#D9FDD3] text-gray max-w-max w-[40%]"
                                                         : "bg-white text-gray-800 max-w-max w-[40%]"
@@ -265,28 +254,12 @@ const Messagener = () => {
                                                     <p className="text-sm break-all" dangerouslySetInnerHTML={{ __html: transformString(chat.messageJsonData?.BODY_TEXT || '') }}></p>
                                                     <p className="text-xs text-end text-gray-800 flex justify-end items-center">
                                                         {getISTTime(chat.messageDateTime)}
-                                                        <span>
-                                                            {
-                                                                chat?.messageStatus === "pending" && <BsClock className='h-3 w-3 text-gray-600 flex justify-center items-center' />
-                                                            }
-                                                            {
-                                                                chat?.messageStatus === "sent" && <BsCheck className='h-4 w-4 text-gray-600 flex justify-center items-center' />
-                                                            }
-                                                            {
-                                                                chat?.messageStatus === "delivered" && <BsCheck2All className='h-4 w-4 text-gray-600 flex justify-center items-center' />
-                                                            }
-                                                            {
-                                                                chat?.messageStatus === "read" && <BsCheck2All className='h-4 w-4 text-blue-500 flex justify-center items-center' />
-                                                            }
-                                                            {
-                                                                chat?.messageStatus === "failed" && <FcCancel className='h-4 w-4 text-blue-500 flex justify-center items-center' />
-                                                            }
-                                                        </span>
+                                                        <MessageStatus messageStatus={chat?.messageStatus} />
                                                     </p>
                                                 </div>
                                             }
                                             {
-                                                chat.messageJsonData.TYPE === "SELECTED_BUTTON_OPTION" && <div
+                                                chat?.messageJsonData?.TYPE === "SELECTED_BUTTON_OPTION" && <div
                                                     className={`p-2 rounded-lg ${chat?.sender === "BOT" || chat?.sender === "SYSTEM"
                                                         ? "bg-[#D9FDD3] text-gray max-w-max w-[40%]"
                                                         : "bg-white text-gray-800 max-w-max w-[40%]"
@@ -295,28 +268,12 @@ const Messagener = () => {
                                                     <p className="text-sm break-all">{chat.messageJsonData?.BODY_TEXT || ''}</p>
                                                     <p className="text-xs text-end text-gray-800 flex justify-end items-center">
                                                         {getISTTime(chat.messageDateTime)}
-                                                        <span>
-                                                            {
-                                                                chat?.messageStatus === "pending" && <BsClock className='h-3 w-3 text-gray-600 flex justify-center items-center' />
-                                                            }
-                                                            {
-                                                                chat?.messageStatus === "sent" && <BsCheck className='h-4 w-4 text-gray-600 flex justify-center items-center' />
-                                                            }
-                                                            {
-                                                                chat?.messageStatus === "delivered" && <BsCheck2All className='h-4 w-4 text-gray-600 flex justify-center items-center' />
-                                                            }
-                                                            {
-                                                                chat?.messageStatus === "read" && <BsCheck2All className='h-4 w-4 text-blue-500 flex justify-center items-center' />
-                                                            }
-                                                            {
-                                                                chat?.messageStatus === "failed" && <FcCancel className='h-4 w-4 text-blue-500 flex justify-center items-center' />
-                                                            }
-                                                        </span>
+                                                        <MessageStatus messageStatus={chat?.messageStatus} />
                                                     </p>
                                                 </div>
                                             }
                                             {
-                                                chat.messageJsonData.TYPE === "SELECTED_LIST_OPTION" && <div
+                                                chat?.messageJsonData?.TYPE === "SELECTED_LIST_OPTION" && <div
                                                     className={`p-2 rounded-lg ${chat?.sender === "BOT" || chat?.sender === "SYSTEM"
                                                         ? "bg-[#D9FDD3] text-gray max-w-max w-[40%]"
                                                         : "bg-white text-gray-800 max-w-max w-[40%]"
@@ -325,28 +282,12 @@ const Messagener = () => {
                                                     <p className="text-sm break-all">{chat.messageJsonData?.BODY_TEXT || ''}</p>
                                                     <p className="text-xs text-end text-gray-800 flex justify-end items-center">
                                                         {getISTTime(chat.messageDateTime)}
-                                                        <span>
-                                                            {
-                                                                chat?.messageStatus === "pending" && <BsClock className='h-3 w-3 text-gray-600 flex justify-center items-center' />
-                                                            }
-                                                            {
-                                                                chat?.messageStatus === "sent" && <BsCheck className='h-4 w-4 text-gray-600 flex justify-center items-center' />
-                                                            }
-                                                            {
-                                                                chat?.messageStatus === "delivered" && <BsCheck2All className='h-4 w-4 text-gray-600 flex justify-center items-center' />
-                                                            }
-                                                            {
-                                                                chat?.messageStatus === "read" && <BsCheck2All className='h-4 w-4 text-blue-500 flex justify-center items-center' />
-                                                            }
-                                                            {
-                                                                chat?.messageStatus === "failed" && <FcCancel className='h-4 w-4 text-blue-500 flex justify-center items-center' />
-                                                            }
-                                                        </span>
+                                                        <MessageStatus messageStatus={chat?.messageStatus} />
                                                     </p>
                                                 </div>
                                             }
                                             {
-                                                chat.messageJsonData.TYPE === "LOCATION_REQUEST" && <div
+                                                chat?.messageJsonData?.TYPE === "LOCATION_REQUEST" && <div
                                                     className={`p-2 rounded-lg ${chat?.sender === "BOT" || chat?.sender === "SYSTEM"
                                                         ? "bg-[#D9FDD3] text-gray max-w-max w-[40%]"
                                                         : "bg-white text-gray-800 max-w-max w-[40%]"
@@ -355,30 +296,14 @@ const Messagener = () => {
                                                     <p className="text-sm break-all" dangerouslySetInnerHTML={{ __html: transformString(chat.messageJsonData?.BODY_TEXT || '') }}></p>
                                                     <p className="text-xs text-end text-gray-800 flex justify-end items-center">
                                                         {getISTTime(chat.messageDateTime)}
-                                                        <span>
-                                                            {
-                                                                chat?.messageStatus === "pending" && <BsClock className='h-3 w-3 text-gray-600 flex justify-center items-center' />
-                                                            }
-                                                            {
-                                                                chat?.messageStatus === "sent" && <BsCheck className='h-4 w-4 text-gray-600 flex justify-center items-center' />
-                                                            }
-                                                            {
-                                                                chat?.messageStatus === "delivered" && <BsCheck2All className='h-4 w-4 text-gray-600 flex justify-center items-center' />
-                                                            }
-                                                            {
-                                                                chat?.messageStatus === "read" && <BsCheck2All className='h-4 w-4 text-blue-500 flex justify-center items-center' />
-                                                            }
-                                                            {
-                                                                chat?.messageStatus === "failed" && <FcCancel className='h-4 w-4 text-blue-500 flex justify-center items-center' />
-                                                            }
-                                                        </span>
+                                                        <MessageStatus messageStatus={chat?.messageStatus} />
                                                     </p>
                                                     <hr />
                                                     <p className="text-md break-all text-center gap-2">{chat?.messageJsonData?.BUTTON_NAME || ''}</p>
                                                 </div>
                                             }
                                             {
-                                                chat.messageJsonData.TYPE === "LOCATION" && <div
+                                                chat?.messageJsonData?.TYPE === "LOCATION" && <div
                                                     className={`p-2 rounded-lg ${chat?.sender === "BOT" || chat?.sender === "SYSTEM"
                                                         ? "bg-[#D9FDD3] text-gray max-w-max w-[40%]"
                                                         : "bg-white text-gray-800 max-w-max w-[40%]"
@@ -389,30 +314,14 @@ const Messagener = () => {
                                                     </p>
                                                     <p className="text-xs text-end text-gray-800 flex justify-end items-center">
                                                         {getISTTime(chat.messageDateTime)}
-                                                        <span>
-                                                            {
-                                                                chat?.messageStatus === "pending" && <BsClock className='h-3 w-3 text-gray-600 flex justify-center items-center' />
-                                                            }
-                                                            {
-                                                                chat?.messageStatus === "sent" && <BsCheck className='h-4 w-4 text-gray-600 flex justify-center items-center' />
-                                                            }
-                                                            {
-                                                                chat?.messageStatus === "delivered" && <BsCheck2All className='h-4 w-4 text-gray-600 flex justify-center items-center' />
-                                                            }
-                                                            {
-                                                                chat?.messageStatus === "read" && <BsCheck2All className='h-4 w-4 text-blue-500 flex justify-center items-center' />
-                                                            }
-                                                            {
-                                                                chat?.messageStatus === "failed" && <FcCancel className='h-4 w-4 text-blue-500 flex justify-center items-center' />
-                                                            }
-                                                        </span>
+                                                        <MessageStatus messageStatus={chat?.messageStatus} />
                                                     </p>
                                                     <hr />
                                                     <p className="text-xs break-all text-center gap-x-2">{chat.messageJsonData?.NAME}</p>
                                                 </div>
                                             }
                                             {
-                                                chat.messageJsonData.TYPE === "IMAGE" && <div
+                                                chat?.messageJsonData?.TYPE === "IMAGE" && <div
                                                     className={`p-2 rounded-lg ${chat?.sender === "BOT" || chat?.sender === "SYSTEM"
                                                         ? "bg-[#D9FDD3] text-gray max-w-max w-[40%]"
                                                         : "bg-white text-gray-800 max-w-max w-[40%]"
@@ -421,23 +330,7 @@ const Messagener = () => {
                                                     <img src={chat.messageJsonData?.URL} className="w-64 h-32" alt="" />
                                                     <p className="text-xs text-end text-gray-800 flex justify-end items-center">
                                                         {getISTTime(chat.messageDateTime)}
-                                                        <span>
-                                                            {
-                                                                chat?.messageStatus === "pending" && <BsClock className='h-3 w-3 text-gray-600 flex justify-center items-center' />
-                                                            }
-                                                            {
-                                                                chat?.messageStatus === "sent" && <BsCheck className='h-4 w-4 text-gray-600 flex justify-center items-center' />
-                                                            }
-                                                            {
-                                                                chat?.messageStatus === "delivered" && <BsCheck2All className='h-4 w-4 text-gray-600 flex justify-center items-center' />
-                                                            }
-                                                            {
-                                                                chat?.messageStatus === "read" && <BsCheck2All className='h-4 w-4 text-blue-500 flex justify-center items-center' />
-                                                            }
-                                                            {
-                                                                chat?.messageStatus === "failed" && <FcCancel className='h-4 w-4 text-blue-500 flex justify-center items-center' />
-                                                            }
-                                                        </span>
+                                                        <MessageStatus messageStatus={chat?.messageStatus} />
                                                     </p>
                                                     <hr />
                                                 </div>
@@ -451,7 +344,7 @@ const Messagener = () => {
                                                 >
 
 {
-    // console.log("chat?.messageJsonData?.PARAMETERS[0]", chat?.messageJsonData?.H_PARAMETERS[0])
+    console.log("chat?.messageJsonData?.PARAMETERS[0]", chat)
 }
                                                     <div className="px-1">
                                                         {/* {
@@ -496,7 +389,8 @@ const Messagener = () => {
                                                                 </p>
                                                             }
 
-                                                            <p className='text-xs break-all' dangerouslySetInnerHTML={{ __html: transformString(chat?.messageJsonData?.CONTENT?.bodyText) }}></p>
+                                                            {/* <p className='text-xs break-all' dangerouslySetInnerHTML={{ __html: transformString(chat?.messageJsonData?.CONTENT?.bodyText) }}></p> */}
+                                                            <p className='text-xs break-all' dangerouslySetInnerHTML={{ __html: replaceDynamicParams(chat?.messageJsonData, "body") }}></p>
                                                             {/* templateData?.headerValue?.text?.replace(/{{(\d+)}}/g, (_, index) => templateData?.headerValue?.example?.header_text[index - 1] || `{{${index}}}`)}</p> */}
 
                                                             {/* <p className='text-sm break-words' dangerouslySetInnerHTML={{ __html: bodyText.replace(/{{(\d+)}}/g, (_, index) => templateData?.bodyValue?.example?.body_text[0][index - 1] || `{{${index}}}`) }}></p> */}
@@ -504,23 +398,7 @@ const Messagener = () => {
                                                             <hr />
                                                             <p className="text-xs text-end text-gray-800 flex justify-end items-center">
                                                                 {getISTTime(chat.messageDateTime)}
-                                                                <span>
-                                                                    {
-                                                                        chat?.messageStatus === "pending" && <BsClock className='h-3 w-3 text-gray-600 flex justify-center items-center' />
-                                                                    }
-                                                                    {
-                                                                        chat?.messageStatus === "sent" && <BsCheck className='h-4 w-4 text-gray-600 flex justify-center items-center' />
-                                                                    }
-                                                                    {
-                                                                        chat?.messageStatus === "delivered" && <BsCheck2All className='h-4 w-4 text-gray-600 flex justify-center items-center' />
-                                                                    }
-                                                                    {
-                                                                        chat?.messageStatus === "read" && <BsCheck2All className='h-4 w-4 text-blue-500 flex justify-center items-center' />
-                                                                    }
-                                                                    {
-                                                                        chat?.messageStatus === "failed" && <FcCancel className='h-4 w-4 text-blue-500 flex justify-center items-center' />
-                                                                    }
-                                                                </span>
+                                                                <MessageStatus messageStatus={chat?.messageStatus} />
                                                             </p>
                                                             <div className='px-2'>
 
